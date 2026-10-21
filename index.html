@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10131d">
+  <title>課堂抽籤機</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #10131d;
+      --panel: #191e2b;
+      --panel-raised: #202637;
+      --line: #30384b;
+      --text: #f5f7ff;
+      --muted: #a4aec4;
+      --accent: #8b7cff;
+      --accent-light: #b8adff;
+      --mint: #52e0bc;
+      --danger: #ff8794;
+      font-family: "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 50% -15%, rgba(139, 124, 255, .18), transparent 48%),
+        var(--bg);
+      font-size: 17px;
+    }
+
+    button, input, textarea { font: inherit; }
+    button { color: inherit; }
+
+    .page {
+      width: min(1180px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 34px 0 48px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 26px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand-icon {
+      display: grid;
+      width: 54px;
+      height: 54px;
+      place-items: center;
+      border: 1px solid rgba(184, 173, 255, .34);
+      border-radius: 17px;
+      background: rgba(139, 124, 255, .16);
+      font-size: 28px;
+    }
+    h1 { margin: 0; font-size: clamp(1.6rem, 3vw, 2.1rem); letter-spacing: .03em; }
+    .subtitle { margin: 5px 0 0; color: var(--muted); font-size: .98rem; }
+    .status-pill {
+      flex: 0 0 auto;
+      padding: 9px 15px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--mint);
+      background: rgba(82, 224, 188, .07);
+      font-size: .92rem;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: rgba(25, 30, 43, .94);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, .16);
+    }
+    .settings { padding: 24px; }
+    .section-title {
+      margin: 0 0 17px;
+      font-size: 1.16rem;
+      font-weight: 750;
+    }
+    .mode-switch {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      padding: 5px;
+      margin-bottom: 21px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #121722;
+    }
+    .mode-button {
+      min-height: 46px;
+      border: 0;
+      border-radius: 10px;
+      color: var(--muted);
+      background: transparent;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .mode-button[aria-pressed="true"] {
+      color: white;
+      background: var(--panel-raised);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, .24);
+    }
+
+    .field { margin: 0 0 18px; }
+    .field label, .field-label {
+      display: block;
+      margin-bottom: 8px;
+      color: #e3e8f5;
+      font-size: .98rem;
+      font-weight: 700;
+    }
+    .hint { margin: 7px 0 0; color: var(--muted); font-size: .87rem; line-height: 1.5; }
+    .range-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
+    input[type="number"], input[type="text"], textarea {
+      width: 100%;
+      border: 1px solid #3a4358;
+      border-radius: 11px;
+      outline: none;
+      color: var(--text);
+      background: #111621;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    input[type="number"], input[type="text"] { min-height: 48px; padding: 10px 13px; }
+    textarea { min-height: 136px; padding: 12px 13px; resize: vertical; line-height: 1.55; }
+    input:focus, textarea:focus { border-color: var(--accent-light); box-shadow: 0 0 0 3px rgba(139, 124, 255, .16); }
+    input::placeholder, textarea::placeholder { color: #778198; }
+    .range-dash { color: var(--muted); }
+    .hidden { display: none !important; }
+    .inline-count { display: grid; grid-template-columns: 1fr 110px; align-items: center; gap: 12px; }
+
+    .exclude-field { margin-top: 20px; }
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 15px 0;
+      margin: 1px 0 17px;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    .switch-copy strong { display: block; font-size: .98rem; }
+    .switch-copy span { display: block; margin-top: 4px; color: var(--muted); font-size: .84rem; }
+    .toggle { position: relative; width: 54px; height: 31px; flex: 0 0 auto; }
+    .toggle input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      border: 1px solid #4b5365;
+      border-radius: 99px;
+      background: #343b4b;
+      cursor: pointer;
+      transition: background .2s, border-color .2s;
+    }
+    .toggle-track::after {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 23px;
+      height: 23px;
+      border-radius: 50%;
+      background: white;
+      content: "";
+      transition: transform .2s;
+    }
+    .toggle input:checked + .toggle-track { border-color: var(--accent); background: var(--accent); }
+    .toggle input:checked + .toggle-track::after { transform: translateX(23px); }
+    .toggle input:focus-visible + .toggle-track { outline: 3px solid var(--accent-light); outline-offset: 3px; }
+
+    .draw-button {
+      width: 100%;
+      min-height: 62px;
+      border: 0;
+      border-radius: 15px;
+      background: linear-gradient(135deg, #9488ff, #715ef2);
+      box-shadow: 0 9px 25px rgba(113, 94, 242, .26);
+      cursor: pointer;
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: .04em;
+      transition: transform .15s, filter .15s;
+    }
+    .draw-button:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+    .draw-button:disabled { cursor: wait; opacity: .72; }
+    .message { min-height: 24px; margin: 12px 0 0; color: var(--danger); font-size: .91rem; line-height: 1.45; }
+
+    .stage {
+      display: flex;
+      min-height: 560px;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .stage-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 22px 26px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    .stage-top .section-title { margin: 0; }
+    .remaining {
+      padding: 8px 12px;
+      border: 1px solid rgba(82, 224, 188, .23);
+      border-radius: 999px;
+      color: var(--mint);
+      background: rgba(82, 224, 188, .07);
+      font-size: .9rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .result-area {
+      position: relative;
+      display: flex;
+      min-height: 315px;
+      flex: 1;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+      overflow: hidden;
+      text-align: center;
+    }
+    .result-area::before {
+      position: absolute;
+      width: 350px;
+      height: 240px;
+      border-radius: 50%;
+      background: rgba(139, 124, 255, .10);
+      content: "";
+      filter: blur(65px);
+      pointer-events: none;
+    }
+    .result-label { position: relative; margin: 0 0 18px; color: var(--muted); font-size: .94rem; letter-spacing: .12em; }
+    .results {
+      position: relative;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 14px;
+      width: 100%;
+    }
+    .result-chip {
+      display: grid;
+      min-width: 120px;
+      min-height: 96px;
+      max-width: 100%;
+      place-items: center;
+      padding: 14px 22px;
+      border: 1px solid rgba(184, 173, 255, .47);
+      border-radius: 19px;
+      color: #fff;
+      background: linear-gradient(145deg, rgba(139, 124, 255, .3), rgba(64, 56, 119, .42));
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .18), inset 0 1px rgba(255, 255, 255, .08);
+      font-size: clamp(2.1rem, 5vw, 4.15rem);
+      font-weight: 850;
+      line-height: 1.1;
+      overflow-wrap: anywhere;
+      animation: appear .42s cubic-bezier(.2, .85, .3, 1.25) both;
+    }
+    .result-chip.name { font-size: clamp(1.7rem, 4vw, 3.1rem); }
+    @keyframes appear {
+      from { opacity: 0; transform: translateY(16px) scale(.82); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .placeholder { position: relative; color: #838da5; font-size: clamp(1.3rem, 3vw, 1.8rem); }
+    .history {
+      padding: 19px 25px 22px;
+      border-top: 1px solid var(--line);
+      background: rgba(17, 22, 33, .42);
+    }
+    .history-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .history-heading h3 { margin: 0; font-size: 1rem; }
+    .reset-button {
+      min-height: 38px;
+      padding: 7px 12px;
+      border: 1px solid #414a5e;
+      border-radius: 9px;
+      color: #d7dced;
+      background: transparent;
+      cursor: pointer;
+      font-size: .86rem;
+    }
+    .reset-button:hover { border-color: var(--danger); color: #ffb2ba; }
+    .history-list { display: flex; min-height: 25px; flex-wrap: wrap; gap: 8px; }
+    .history-item {
+      padding: 6px 10px;
+      border: 1px solid #353d51;
+      border-radius: 8px;
+      color: #d9deec;
+      background: #202637;
+      font-size: .9rem;
+    }
+    .history-empty { color: #838da5; font-size: .9rem; }
+    .confetti {
+      position: fixed;
+      z-index: 10;
+      top: -14px;
+      width: 9px;
+      height: 15px;
+      pointer-events: none;
+      animation: fall var(--fall-time) linear forwards;
+    }
+    @keyframes fall {
+      to { transform: translate3d(var(--drift), 110vh, 0) rotate(760deg); opacity: .15; }
+    }
+
+    @media (max-width: 800px) {
+      .page { width: min(680px, calc(100% - 28px)); padding-top: 24px; }
+      .layout { grid-template-columns: 1fr; }
+      .stage { min-height: 475px; }
+    }
+    @media (max-width: 480px) {
+      body { font-size: 16px; }
+      .page { width: calc(100% - 22px); padding-top: 17px; }
+      header { align-items: flex-start; margin-bottom: 18px; }
+      .brand { gap: 10px; }
+      .brand-icon { width: 45px; height: 45px; border-radius: 14px; font-size: 23px; }
+      .subtitle { font-size: .84rem; }
+      .status-pill { padding: 7px 9px; font-size: .76rem; }
+      .settings { padding: 19px; }
+      .stage { min-height: 430px; }
+      .stage-top { align-items: flex-start; padding: 18px; }
+      .remaining { padding: 7px 9px; font-size: .78rem; }
+      .result-area { min-height: 260px; padding: 22px 13px; }
+      .result-chip { min-width: 90px; min-height: 76px; padding: 11px 15px; }
+      .history { padding: 16px 17px 19px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; }
+      .result-chip { animation-duration: .01ms; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">🎲</div>
+        <div>
+          <h1>課堂抽籤機</h1>
+          <p class="subtitle">每一次抽選，都是一次公平的機會</p>
+        </div>
+      </div>
+      <div class="status-pill">● 名單儲存於此裝置</div>
+    </header>
+
+    <div class="layout">
+      <section class="panel settings" aria-labelledby="settings-title">
+        <h2 class="section-title" id="settings-title">抽籤設定</h2>
+        <div class="mode-switch" role="group" aria-label="抽籤模式">
+          <button class="mode-button" id="number-mode-button" type="button" aria-pressed="true">號碼模式</button>
+          <button class="mode-button" id="name-mode-button" type="button" aria-pressed="false">姓名模式</button>
+        </div>
+
+        <div id="number-fields">
+          <div class="field">
+            <span class="field-label">號碼範圍</span>
+            <div class="range-row">
+              <input id="range-start" type="number" value="1" min="1" step="1" aria-label="起始號碼">
+              <span class="range-dash" aria-hidden="true">到</span>
+              <input id="range-end" type="number" value="30" min="1" step="1" aria-label="結束號碼">
+            </div>
+            <p class="hint">包含起始與結束號碼，例如 1 到 30。</p>
+          </div>
+        </div>
+
+        <div id="name-fields" class="hidden">
+          <div class="field">
+            <label for="name-list">班級名單</label>
+            <textarea id="name-list" placeholder="每行輸入一位學生姓名&#10;例如：&#10;王小明&#10;陳小華"></textarea>
+            <p class="hint">名單會自動儲存在此瀏覽器，重開頁面仍會保留。</p>
+          </div>
+        </div>
+
+        <div class="field inline-count">
+          <label for="draw-count">本次抽出人數</label>
+          <input id="draw-count" type="number" value="1" min="1" max="100" step="1">
+        </div>
+
+        <div class="switch-row">
+          <div class="switch-copy">
+            <strong>不重複抽籤</strong>
+            <span>本次抽過的人不會再次抽中</span>
+          </div>
+          <label class="toggle" aria-label="不重複抽籤">
+            <input id="no-repeat" type="checkbox">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+
+        <div class="field exclude-field">
+          <label for="exclude-list">排除號碼或姓名</label>
+          <input id="exclude-list" type="text" placeholder="例如：5, 12 或 王小明">
+          <p class="hint">多個項目可用逗號、空白或換行分隔。</p>
+        </div>
+
+        <button class="draw-button" id="draw-button" type="button">開始抽籤</button>
+        <p class="message" id="message" role="alert" aria-live="polite"></p>
+      </section>
+
+      <section class="panel stage" aria-labelledby="stage-title">
+        <div class="stage-top">
+          <h2 class="section-title" id="stage-title">抽籤結果</h2>
+          <div class="remaining" id="remaining" aria-live="polite">可抽人數：30</div>
+        </div>
+        <div class="result-area" aria-live="polite" aria-atomic="true">
+          <p class="result-label" id="result-label">準備好了嗎？</p>
+          <div class="results" id="results">
+            <div class="placeholder">按下「開始抽籤」</div>
+          </div>
+        </div>
+        <div class="history">
+          <div class="history-heading">
+            <h3>抽籤紀錄</h3>
+            <button class="reset-button" id="reset-button" type="button">重置紀錄</button>
+          </div>
+          <div class="history-list" id="history-list">
+            <span class="history-empty">尚未有抽籤紀錄</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const STORAGE_KEY = "classroom-lottery-roster";
+      const MAX_PARTICIPANTS = 100000;
+      const ANIMATION_DURATION = 2000;
+      const elements = {
+        numberModeButton: document.getElementById("number-mode-button"),
+        nameModeButton: document.getElementById("name-mode-button"),
+        numberFields: document.getElementById("number-fields"),
+        nameFields: document.getElementById("name-fields"),
+        start: document.getElementById("range-start"),
+        end: document.getElementById("range-end"),
+        nameList: document.getElementById("name-list"),
+        drawCount: document.getElementById("draw-count"),
+        noRepeat: document.getElementById("no-repeat"),
+        exclude: document.getElementById("exclude-list"),
+        drawButton: document.getElementById("draw-button"),
+        resetButton: document.getElementById("reset-button"),
+        message: document.getElementById("message"),
+        remaining: document.getElementById("remaining"),
+        resultLabel: document.getElementById("result-label"),
+        results: document.getElementById("results"),
+        history: document.getElementById("history-list")
+      };
+
+      let mode = "number";
+      let busy = false;
+      let drawnIds = new Set();
+      let history = [];
+      let audioContext;
+
+      function readRoster() {
+        try {
+          elements.nameList.value = localStorage.getItem(STORAGE_KEY) || "";
+        } catch (error) {
+          console.error("無法讀取已儲存的名單。", error);
+          elements.message.textContent = "無法讀取本機名單，請檢查瀏覽器儲存空間設定。";
+        }
+      }
+
+      function saveRoster() {
+        try {
+          localStorage.setItem(STORAGE_KEY, elements.nameList.value);
+        } catch (error) {
+          console.error("無法儲存名單。", error);
+          elements.message.textContent = "名單無法儲存至此瀏覽器，請檢查儲存空間設定。";
+        }
+      }
+
+      function setMode(nextMode) {
+        if (mode === nextMode) return;
+        mode = nextMode;
+        drawnIds = new Set();
+        history = [];
+        elements.numberModeButton.setAttribute("aria-pressed", String(mode === "number"));
+        elements.nameModeButton.setAttribute("aria-pressed", String(mode === "name"));
+        elements.numberFields.classList.toggle("hidden", mode !== "number");
+        elements.nameFields.classList.toggle("hidden", mode !== "name");
+        elements.message.textContent = "";
+        elements.resultLabel.textContent = "準備好了嗎？";
+        elements.results.innerHTML = '<div class="placeholder">按下「開始抽籤」</div>';
+        elements.drawButton.textContent = "開始抽籤";
+        renderHistory();
+        updateRemaining();
+      }
+
+      function getParticipants() {
+        if (mode === "name") {
+          const occurrences = new Map();
+          return elements.nameList.value
+            .split(/\r?\n/)
+            .map(line => line.trim())
+            .filter(Boolean)
+            .map(name => {
+              const occurrence = occurrences.get(name) || 0;
+              occurrences.set(name, occurrence + 1);
+              return { id: `name-${JSON.stringify([name, occurrence])}`, value: name };
+            });
+        }
+
+        const start = Number(elements.start.value);
+        const end = Number(elements.end.value);
+        if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 1 || end < start) {
+          throw new Error("請輸入有效的號碼範圍，起始號碼需大於 0 且不可大於結束號碼。");
+        }
+        const size = end - start + 1;
+        if (!Number.isSafeInteger(size) || size > MAX_PARTICIPANTS) {
+          throw new Error(`號碼範圍最多可設定 ${MAX_PARTICIPANTS.toLocaleString("zh-Hant")} 人，請縮小範圍。`);
+        }
+        return Array.from({ length: size }, (_, index) => {
+          const number = start + index;
+          return { id: `number-${number}`, value: String(number) };
+        });
+      }
+
+      function getExcludedValues() {
+        return new Set(elements.exclude.value
+          .split(/[,\s，、;；]+/)
+          .map(value => value.trim())
+          .filter(Boolean));
+      }
+
+      function getEligibleParticipants() {
+        const participants = getParticipants();
+        const excluded = getExcludedValues();
+        return participants.filter(participant => {
+          return !excluded.has(participant.value) && !(elements.noRepeat.checked && drawnIds.has(participant.id));
+        });
+      }
+
+      function updateRemaining() {
+        try {
+          elements.remaining.textContent = `可抽人數：${getEligibleParticipants().length}`;
+        } catch (error) {
+          elements.remaining.textContent = "可抽人數：—";
+        }
+      }
+
+      function renderHistory() {
+        elements.history.replaceChildren();
+        if (history.length === 0) {
+          const empty = document.createElement("span");
+          empty.className = "history-empty";
+          empty.textContent = "尚未有抽籤紀錄";
+          elements.history.append(empty);
+          return;
+        }
+        for (const item of history) {
+          const entry = document.createElement("span");
+          entry.className = "history-item";
+          entry.textContent = `${item.time} · ${item.values.join("、")}`;
+          elements.history.append(entry);
+        }
+      }
+
+      function playCelebrationSound() {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) {
+          console.warn("此瀏覽器不支援 Web Audio API，將略過抽籤音效。");
+          return;
+        }
+        try {
+          audioContext = audioContext || new AudioContextClass();
+          if (audioContext.state === "suspended") audioContext.resume();
+          const now = audioContext.currentTime;
+          [523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
+            const oscillator = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            const startAt = now + index * 0.11;
+            oscillator.type = "sine";
+            oscillator.frequency.setValueAtTime(frequency, startAt);
+            gain.gain.setValueAtTime(0.0001, startAt);
+            gain.gain.exponentialRampToValueAtTime(0.12, startAt + 0.025);
+            gain.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.3);
+            oscillator.connect(gain);
+            gain.connect(audioContext.destination);
+            oscillator.start(startAt);
+            oscillator.stop(startAt + 0.32);
+          });
+        } catch (error) {
+          console.error("播放抽籤音效失敗。", error);
+        }
+      }
+
+      function showConfetti() {
+        const colors = ["#a99cff", "#52e0bc", "#ffd166", "#ff8296", "#72c9ff", "#ffffff"];
+        for (let index = 0; index < 90; index += 1) {
+          const piece = document.createElement("span");
+          piece.className = "confetti";
+          piece.style.left = `${Math.random() * 100}vw`;
+          piece.style.backgroundColor = colors[index % colors.length];
+          piece.style.setProperty("--drift", `${Math.random() * 220 - 110}px`);
+          piece.style.setProperty("--fall-time", `${2.2 + Math.random() * 1.8}s`);
+          piece.style.animationDelay = `${Math.random() * 0.45}s`;
+          document.body.append(piece);
+          piece.addEventListener("animationend", () => piece.remove(), { once: true });
+        }
+      }
+
+      function wait(milliseconds) {
+        return new Promise(resolve => window.setTimeout(resolve, milliseconds));
+      }
+
+      async function draw() {
+        if (busy) return;
+        elements.message.textContent = "";
+        let eligible;
+        let count;
+        try {
+          eligible = getEligibleParticipants();
+          count = Number(elements.drawCount.value);
+          if (!Number.isSafeInteger(count) || count < 1 || count > 100) {
+            throw new Error("本次抽出人數請設定為 1 到 100 的整數。");
+          }
+          if (eligible.length < count) {
+            throw new Error(`可抽人數不足：目前只有 ${eligible.length} 人，無法抽出 ${count} 人。請調整人數或排除名單。`);
+          }
+        } catch (error) {
+          elements.message.textContent = error.message || "抽籤設定有誤，請檢查輸入內容後再試一次。";
+          updateRemaining();
+          return;
+        }
+
+        const selected = [];
+        const pool = [...eligible];
+        for (let index = 0; index < count; index += 1) {
+          const chosenIndex = Math.floor(Math.random() * pool.length);
+          selected.push(pool.splice(chosenIndex, 1)[0]);
+        }
+
+        busy = true;
+        elements.drawButton.disabled = true;
+        elements.drawButton.textContent = "抽籤中…";
+        elements.resultLabel.textContent = "幸運名單即將揭曉";
+        const startedAt = performance.now();
+        while (performance.now() - startedAt < ANIMATION_DURATION) {
+          const preview = selected.map(() => eligible[Math.floor(Math.random() * eligible.length)].value);
+          renderResults(preview, true);
+          await wait(85);
+        }
+
+        renderResults(selected.map(participant => participant.value), false);
+        elements.resultLabel.textContent = "恭喜中選！";
+        if (elements.noRepeat.checked) {
+          selected.forEach(participant => drawnIds.add(participant.id));
+        }
+        const time = new Intl.DateTimeFormat("zh-Hant", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date());
+        history.unshift({ time, values: selected.map(participant => participant.value) });
+        renderHistory();
+        updateRemaining();
+        showConfetti();
+        playCelebrationSound();
+        elements.drawButton.disabled = false;
+        elements.drawButton.textContent = "再抽一次";
+        busy = false;
+      }
+
+      function renderResults(values, rolling) {
+        elements.results.replaceChildren();
+        values.forEach(value => {
+          const chip = document.createElement("div");
+          chip.className = `result-chip${mode === "name" ? " name" : ""}`;
+          chip.textContent = value;
+          if (rolling) chip.style.animation = "none";
+          elements.results.append(chip);
+        });
+      }
+
+      function reset() {
+        if (busy) return;
+        drawnIds = new Set();
+        history = [];
+        elements.message.textContent = "";
+        elements.resultLabel.textContent = "準備好了嗎？";
+        elements.results.innerHTML = '<div class="placeholder">按下「開始抽籤」</div>';
+        elements.drawButton.textContent = "開始抽籤";
+        renderHistory();
+        updateRemaining();
+      }
+
+      elements.numberModeButton.addEventListener("click", () => setMode("number"));
+      elements.nameModeButton.addEventListener("click", () => setMode("name"));
+      elements.nameList.addEventListener("input", () => {
+        saveRoster();
+        updateRemaining();
+      });
+      [elements.start, elements.end, elements.exclude, elements.noRepeat].forEach(element => {
+        element.addEventListener("input", updateRemaining);
+        element.addEventListener("change", updateRemaining);
+      });
+      elements.drawButton.addEventListener("click", draw);
+      elements.resetButton.addEventListener("click", reset);
+
+      readRoster();
+      updateRemaining();
+    })();
+  </script>
+</body>
+</html>
